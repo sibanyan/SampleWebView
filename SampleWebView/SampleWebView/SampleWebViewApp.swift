@@ -12,10 +12,12 @@ struct SampleWebViewApp: App {
     var body: some Scene {
         WindowGroup {
 //            ContentView()
-            ListView(contacts: contacts)
+//            ListView(contacts: contacts)
+            CustomScrollbarScrollView()
         }
     }
 }
+
 let contacts: [Contact] = [
     Contact(name: "あいざわ"),
     Contact(name: "アイコ"),

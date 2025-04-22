@@ -22,60 +22,51 @@ struct ListView : View {
             return $0 < $1
         }
 
-        GeometryReader { outerProxy in
-            ScrollViewReader { scrollProxy in
-                ScrollView {
-                    GeometryReader { scrollGeo in
-                        Color.clear
-                            .onAppear {
-                                scrollOffset = scrollGeo.frame(in: .named("scroll")).minY
-                            }
-                            .onChange(of: scrollGeo.frame(in: .named("scroll")).minY) { newY in
-                                print("scrollOffset\(scrollOffset)")
-                                isIndicatorVisible = true
-                                scrollOffset = -newY
-                                // 自動でフェードアウト
-                                DispatchQueue.main.asyncAfter(deadline: .now() + 1.2) {
-                                    withAnimation {
-                                        self.isIndicatorVisible = false
-                                    }
-                                }
-                            }
+        ScrollView {
+            GeometryReader { scrollGeo in
+                Color.clear
+                    .onAppear {
+                        scrollOffset = scrollGeo.frame(in: .named("scroll")).minY
                     }
-                    .frame(height: 0) // 見えない位置に設置
-
-                    LazyVStack(alignment: .leading, spacing: 12) {
-                        ForEach(sortedKeys, id: \.self) { key in
-                            sectionView(key: key, contacts: grouped[key] ?? [])
-                                .background(GeometryReader { geo in
-                                    Color
-                                        .clear
-                                        .onAppear {
-                                            sectionOffsets[key] = geo.frame(in: .named("scroll")).minY
-                                        }
-                                        .onChange(of: geo.frame(in: .named("scroll")).minY) { value in
-//                                            print("key:\(key),value\(value)")
-                                            sectionOffsets[key] = value
-
-                                        }
-                                })
+                    .onChange(of: scrollGeo.frame(in: .named("scroll")).minY) { newY in
+                        print("scrollOffset\(scrollOffset)")
+                        isIndicatorVisible = true
+                        scrollOffset = -newY
+                        // 自動でフェードアウト
+                        DispatchQueue.main.asyncAfter(deadline: .now() + 1.2) {
+                            withAnimation {
+                                self.isIndicatorVisible = false
+                            }
                         }
                     }
-                    .padding(.horizontal)
+            }
+            .frame(height: 0) // 見えない位置に設置
+
+            LazyVStack(alignment: .leading, spacing: 12) {
+//            VStack(alignment: .leading, spacing: 12) {
+                ForEach(sortedKeys, id: \.self) { key in
+                    sectionView(key: key, contacts: grouped[key] ?? [])
+                        .background(GeometryReader { geo in
+                            Color
+                                .clear
+                                .onAppear {
+                                    sectionOffsets[key] = geo.frame(in: .named("scroll")).minY
+                                }
+                                .onChange(of: geo.frame(in: .named("scroll")).minY) { value in
+                                    print("key:\(key),value\(value)")
+                                    sectionOffsets[key] = value
+
+                                }
+                        })
                 }
-                .coordinateSpace(name: "scroll")
-                .overlay(alignment: .topTrailing) {
-                    if let key = findCurrentSection(), let y = sectionOffsets[key], isIndicatorVisible {
-                        Text(key)
-                            .font(.headline)
-                            .padding(30)
-                            .background(Color.black.opacity(0.7))
-                            .cornerRadius(10)
-                            .foregroundColor(.white)
-                            .offset(x: -10, y: scrollOffset / 1.8)
-                            .animation(.easeOut(duration: 0.1), value: key)
-                    }
-                }
+            }
+            .padding(.horizontal)
+        }
+        .coordinateSpace(name: "scroll")
+        .overlay(alignment: .topTrailing) {
+            if let key = findCurrentSection(), let y = sectionOffsets[key], isIndicatorVisible {
+                BalloonView(word: key)
+                    .offset(x: -10, y: scrollOffset / 1.8)
             }
         }
     }
@@ -97,70 +88,6 @@ struct ListView : View {
             }
         }
     }
-//    var body: some View {
-//
-//        let grouped = groupContacts(contacts)
-//        let sortedKeys = grouped.keys.sorted { lhs, rhs in
-//            if lhs == "#" { return false }
-//            if rhs == "#" { return true }
-//            return lhs < rhs
-//        }
-//        ScrollViewReader { scrollProxy in
-//            ScrollView {
-//                LazyVStack(alignment: .leading, spacing: 12) {
-//                    ForEach(sortedKeys, id: \.self) { key in
-//                        SectionView(key: key, contacts: grouped[key] ?? [])
-//                            .background(GeometryReader { geo in
-//                                Color.clear
-//                                    .preference(key: SectionPreferenceKey.self, value: [SectionInfo(key: key, offset: geo.frame(in: .named("scroll")).minY)])
-//                            })
-//                    }
-//                }
-//                .padding(.horizontal)
-//            }
-//            .coordinateSpace(name: "scroll")
-//            .onPreferenceChange(SectionPreferenceKey.self) { values in
-//                updateCurrentSection(with: values)
-//            }
-//            .overlay(
-//                Group {
-//                    if let current = currentSection, isIndicatorVisible {
-//                        Text(current)
-//                            .font(.largeTitle)
-//                            .padding(20)
-//                            .background(Color.gray.opacity(0.8))
-//                            .cornerRadius(12)
-//                            .foregroundColor(.white)
-//                            .transition(.opacity)
-//                            .animation(.easeInOut, value: current)
-//                    }
-//                }
-//                .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .center)
-//            )
-//        }
-//
-//    }
-//    
-//    private func updateCurrentSection(with sectionOffsets: [SectionInfo]) {
-//        
-//        guard let scrollY = UIApplication.shared.windows.first?.rootViewController?.view.frame.minY else { return }
-//
-//        let visible = sectionOffsets
-//            .sorted { abs($0.offset - scrollY) < abs($1.offset - scrollY) }
-//            .first
-//
-//        if let visible = visible, visible.key != currentSection {
-//            currentSection = visible.key
-//            isIndicatorVisible = true
-//
-//            // 自動でフェードアウト
-//            DispatchQueue.main.asyncAfter(deadline: .now() + 1.2) {
-//                withAnimation {
-//                    self.isIndicatorVisible = false
-//                }
-//            }
-//        }
-//    }
 }
 
 // MARK: - SectionView
@@ -224,7 +151,7 @@ extension String {
         }
         // 一覧に小文字を統一する
         let kanaMap: [Character: Character] = [
-            "ぁ": "あ", "ぃ": "い", "ぅ": "う", "ぇ": "え", "ぉ": "お", "ゃ": "や", "ゅ": "ゆ", "ょ": "よ", "ゎ": "わ"
+            "ぁ": "あ", "ぃ": "い", "ぅ": "う", "ぇ": "え", "ぉ": "お", "ゕ": "か", "ゖ": "け", "ゃ": "や", "ゅ": "ゆ", "ょ": "よ", "ゎ": "わ"
         ]
         if let mapped = kanaMap[str.first!] {
             str = String(mapped)
@@ -233,104 +160,64 @@ extension String {
     }
 }
 
-//// MARK: - PreferenceKey 用構造体
-//struct SectionInfo: Equatable {
-//    let key: String
-//    let offset: CGFloat
-//}
-//
-//struct SectionPreferenceKey: PreferenceKey {
-//    static var defaultValue: [SectionInfo] = []
-//    static func reduce(value: inout [SectionInfo], nextValue: () -> [SectionInfo]) {
-//        value.append(contentsOf: nextValue())
-//    }
-//}
+struct BalloonView: View {
+    var word: String
+    var body: some View {
+        BalloonShape()
+            .fill(Color.red.opacity(0.75))
+            .overlay(
+                Text(word)
+                    .foregroundColor(.white)
+                    .font(.headline)
+                    .padding(.horizontal, 12)
+                    .padding(.vertical, 8),
+                alignment: .center
+            )
+            .frame(width: 100, height: 100)
+    }
+}
 
-//enum SectionKey: String, CaseIterable {
-//    case symbols = "#"
-//    case japanese
-//    case alphabet
-//
-//    static func from(character: Character) -> SectionKey {
-//        if character.isLetter {
-//            if ("あ"..."ん").contains(character) {
-//                return .japanese
-//            } else if ("A"..."Z").contains(character.uppercased()) {
-//                return .alphabet
-//            }
-//        }
-//        return .symbols
-//    }
-//}
+struct BalloonShape: Shape {
+    func path(in rect: CGRect) -> Path {
+        var path = Path()
+        let cornerRadius: CGFloat = 10
+        let tailWidth: CGFloat = 10
+        let tailHeight: CGFloat = 10
+        // 本体の四角形（右下だけ欠ける）
+        path.addRoundedRect(in: CGRect(x: rect.minX,
+                                       y: rect.minY,
+                                       width: rect.width - tailWidth,
+                                       height: rect.height),
+                            cornerSize: CGSize(width: cornerRadius, height: cornerRadius))
+        // 右側に三角のしっぽ
+        path.move(to: CGPoint(x: rect.maxX - tailWidth, y: rect.midY - tailHeight / 2))
+        path.addLine(to: CGPoint(x: rect.maxX, y: rect.midY))
+        path.addLine(to: CGPoint(x: rect.maxX - tailWidth, y: rect.midY + tailHeight / 2))
+        path.closeSubpath()
 
-
+        return path
+    }
+}
 
 
 struct ContactListView_Previews: PreviewProvider {
     static var previews: some View {
         ListView(contacts: [
-            Contact(name: "あいざわ"),
-             Contact(name: "アイコ"),
-             Contact(name: "あべ"),
-            Contact(name: "アオキ"),
-            Contact(name: "ぁきお"),
-
-             // か行
-             Contact(name: "かとう"),
-             Contact(name: "カナエ"),
-             Contact(name: "カズミ"),
-
-             // さ行
-             Contact(name: "ささき"),
-             Contact(name: "サトル"),
-             Contact(name: "しみず"),
-             Contact(name: "シズカ"),
-
-             // た行
-             Contact(name: "たなか"),
-             Contact(name: "タケシ"),
-
-             // な行
-             Contact(name: "なかむら"),
-             Contact(name: "ナオコ"),
-
-             // は行
-             Contact(name: "はせがわ"),
-             Contact(name: "ハルキ"),
-
-             // ま行
-             Contact(name: "まつもと"),
-             Contact(name: "マサミ"),
-
-             // や行
-             Contact(name: "やまだ"),
-             Contact(name: "ヤスオ"),
-
-             // ら行
-             Contact(name: "らいと"),
-             Contact(name: "ライチ"),
-
-             // わ行
-             Contact(name: "わだ"),
-             Contact(name: "ワカナ"),
-
-             // ん
-             Contact(name: "んどう"),
-
-             // 英字
-             Contact(name: "Alice"),
-             Contact(name: "Bob"),
-             Contact(name: "Charlie"),
-             Contact(name: "David"),
-             Contact(name: "Emma"),
-             Contact(name: "Frank"),
-
-             // 記号・数字・その他
-             Contact(name: "*特別"),
-             Contact(name: "123タロウ"),
-             Contact(name: "!Exclamation"),
-             Contact(name: "💡Idea"),
-             Contact(name: "（カギカッコ）")
+            Contact(name: "あいざわ"), Contact(name: "アイコ"), Contact(name: "あべ"),
+            Contact(name: "アオキ"), Contact(name: "ぁきお"),
+            Contact(name: "かとう"), Contact(name: "カナエ"), Contact(name: "カズミ"),
+            Contact(name: "ささき"), Contact(name: "サトル"), Contact(name: "しみず"), Contact(name: "シズカ"),
+            Contact(name: "たなか"), Contact(name: "タケシ"),
+            Contact(name: "なかむら"), Contact(name: "ナオコ"),
+            Contact(name: "はせがわ"), Contact(name: "ハルキ"),
+            Contact(name: "まつもと"), Contact(name: "マサミ"),
+            Contact(name: "やまだ"), Contact(name: "ヤスオ"),
+            Contact(name: "らいと"), Contact(name: "ライチ"),
+            Contact(name: "わだ"), Contact(name: "ワカナ"),
+            Contact(name: "んどう"),
+            Contact(name: "Alice"), Contact(name: "Bob"), Contact(name: "Charlie"), Contact(name: "David"), Contact(name: "Emma"), Contact(name: "Frank"),
+            Contact(name: "*特別"), Contact(name: "123タロウ"), Contact(name: "!Exclamation"),
+            Contact(name: "💡Idea"), Contact(name: "（カギカッコ）")
         ])
     }
 }
